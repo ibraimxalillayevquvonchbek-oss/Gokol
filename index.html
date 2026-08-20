@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="theme-color" content="#070b12">
+	<title>Gokol: Zombie Escape</title>
+	<style>
+		:root {
+			--bg: #070b12;
+			--panel: rgba(12, 20, 31, 0.92);
+			--line: #1d3341;
+			--text: #f4f7fb;
+			--muted: #8295a6;
+			--mint: #7df0c2;
+			--pink: #ff5d8f;
+			--yellow: #ffd166;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			overflow: hidden;
+			color: var(--text);
+			background: radial-gradient(circle at 50% 10%, #17313b 0, transparent 38%), var(--bg);
+			font-family: Arial, sans-serif;
+			touch-action: none;
+		}
+
+		.shell {
+			width: min(100%, 620px);
+			min-height: 100vh;
+			margin: auto;
+			padding: max(18px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+			display: flex;
+			flex-direction: column;
+		}
+
+		.topbar {
+			display: flex;
+			align-items: end;
+			justify-content: space-between;
+			gap: 16px;
+			padding: 0 4px 14px;
+		}
+
+		.brand {
+			margin: 0;
+			color: var(--mint);
+			font: 700 clamp(1.65rem, 7vw, 2.4rem)/0.9 Georgia, serif;
+			letter-spacing: -0.05em;
+		}
+
+		.eyebrow {
+			margin: 7px 0 0;
+			color: var(--muted);
+			font-size: 0.63rem;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+		}
+
+		.stats {
+			display: flex;
+			align-items: end;
+			gap: 18px;
+		}
+
+		.stat {
+			text-align: right;
+			font-size: 1.55rem;
+			font-weight: 700;
+			line-height: 1;
+		}
+
+		.stat small {
+			display: block;
+			margin-bottom: 5px;
+			color: var(--muted);
+			font-size: 0.58rem;
+			letter-spacing: 0.15em;
+			text-transform: uppercase;
+		}
+
+		.stat.score { color: var(--yellow); }
+		.stat.coins { color: var(--mint); }
+
+		.arena {
+			position: relative;
+			flex: 1;
+			min-height: 390px;
+			overflow: hidden;
+			border: 1px solid var(--line);
+			border-radius: 14px;
+			background:
+				linear-gradient(rgba(125, 240, 194, 0.035) 1px, transparent 1px),
+				linear-gradient(90deg, rgba(125, 240, 194, 0.035) 1px, transparent 1px),
+				linear-gradient(180deg, rgba(12, 30, 38, 0.28), rgba(4, 8, 14, 0.9));
+			background-size: 40px 40px, 40px 40px, auto;
+			box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.42), 0 0 35px rgba(36, 153, 145, 0.08);
+		}
+
+		.arena::after {
+			position: absolute;
+			right: 0;
+			bottom: 0;
+			left: 0;
+			height: 26%;
+			background: linear-gradient(transparent, rgba(125, 240, 194, 0.07));
+			content: "";
+			pointer-events: none;
+		}
+
+		.entity {
+			position: absolute;
+			z-index: 2;
+			user-select: none;
+		}
+
+		#player {
+			z-index: 3;
+			width: 42px;
+			height: 48px;
+			border: 2px solid var(--mint);
+			border-radius: 13px 13px 8px 8px;
+			background: #102a2e;
+			box-shadow: 0 0 16px rgba(125, 240, 194, 0.45);
+			transform: translateX(-50%);
+		}
+
+		#player::before {
+			position: absolute;
+			top: 10px;
+			left: 8px;
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: var(--mint);
+			box-shadow: 15px 0 var(--mint);
+			content: "";
+		}
+
+		#player::after {
+			position: absolute;
+			right: 8px;
+			bottom: 8px;
+			left: 8px;
+			height: 3px;
+			border-radius: 3px;
+			background: var(--mint);
+			content: "";
+		}
+
+		#player.skin-violet {
+			border-color: #b98cff;
+			background: #24183d;
+			box-shadow: 0 0 16px rgba(185, 140, 255, 0.55);
+		}
+
+		#player.skin-violet::before,
+		#player.skin-violet::after { background: #b98cff; box-shadow: 15px 0 #b98cff; }
+		#player.skin-violet::after { box-shadow: none; }
+
+		#player.skin-coral {
+			border-color: #ff9066;
+			background: #42201b;
+			box-shadow: 0 0 16px rgba(255, 144, 102, 0.58);
+		}
+
+		#player.skin-coral::before,
+		#player.skin-coral::after { background: #ff9066; box-shadow: 15px 0 #ff9066; }
+		#player.skin-coral::after { box-shadow: none; }
+
+		.zombie {
+			width: 38px;
+			height: 42px;
+			border: 2px solid var(--pink);
+			border-radius: 50% 50% 10px 10px;
+			background: #351525;
+			box-shadow: 0 0 14px rgba(255, 93, 143, 0.5);
+			transform: translateX(-50%);
+		}
+
+		.zombie::before {
+			position: absolute;
+			top: 10px;
+			left: 7px;
+			width: 7px;
+			height: 7px;
+			border-radius: 50%;
+			background: var(--yellow);
+			box-shadow: 13px 0 var(--yellow);
+			content: "";
+		}
+
+		.zombie::after {
+			position: absolute;
+			right: 9px;
+			bottom: 7px;
+			left: 9px;
+			height: 4px;
+			border-bottom: 2px solid var(--pink);
+			content: "";
+		}
+
+		.coin {
+			width: 25px;
+			height: 25px;
+			border: 3px solid var(--yellow);
+			border-radius: 50%;
+			background: #5a4011;
+			box-shadow: 0 0 16px rgba(255, 209, 102, 0.85), inset 0 0 7px rgba(255, 209, 102, 0.65);
+			transform: translateX(-50%);
+		}
+
+		.coin::after {
+			position: absolute;
+			inset: 4px;
+			border: 1px solid rgba(255, 255, 255, 0.6);
+			border-radius: 50%;
+			content: "";
+		}
+
+		.message {
+			position: absolute;
+			z-index: 5;
+			inset: 0;
+			display: grid;
+			place-items: center;
+			padding: 24px;
+			background: rgba(4, 8, 14, 0.76);
+			text-align: center;
+		}
+
+		.message[hidden] { display: none; }
+
+		.menu {
+			z-index: 6;
+			background: radial-gradient(circle at 50% 42%, rgba(31, 78, 75, 0.32), rgba(4, 8, 14, 0.96) 62%);
+		}
+
+		.menu h2 {
+			color: var(--mint);
+			font-size: clamp(2.2rem, 10vw, 4.5rem);
+			letter-spacing: -0.05em;
+			text-shadow: 0 0 20px rgba(125, 240, 194, 0.3);
+		}
+
+		.menu p { letter-spacing: 0.06em; text-transform: none; }
+
+		.shop-content { width: min(100%, 500px); }
+		.shop-content h2 { margin-bottom: 10px; }
+		.shop-balance { color: var(--yellow) !important; font-weight: 700; }
+		.skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 18px 0; }
+		.skin-card { padding: 12px 8px; border: 1px solid var(--line); border-radius: 9px; background: rgba(17, 34, 42, 0.75); }
+		.skin-preview { width: 30px; height: 34px; margin: 0 auto 10px; border: 2px solid var(--mint); border-radius: 10px 10px 6px 6px; background: #102a2e; }
+		.skin-preview.violet { border-color: #b98cff; background: #24183d; box-shadow: 0 0 12px rgba(185, 140, 255, 0.5); }
+		.skin-preview.coral { border-color: #ff9066; background: #42201b; box-shadow: 0 0 12px rgba(255, 144, 102, 0.5); }
+		.skin-name { margin: 0 0 6px; color: var(--text); font: 700 0.65rem Arial, sans-serif; letter-spacing: 0; }
+		.skin-price { margin: 0 0 9px !important; color: var(--yellow) !important; font-size: 0.62rem !important; letter-spacing: 0 !important; }
+		.skin-action { width: 100%; min-height: 30px; padding: 6px 3px; border-color: var(--line); color: var(--mint); background: transparent; font-size: 0.55rem; letter-spacing: 0.06em; }
+		.skin-action:disabled { color: var(--muted); cursor: default; opacity: 0.7; }
+		.shop-back { padding: 11px 24px; color: var(--mint); background: transparent; }
+
+		@media (max-width: 420px) {
+			.skin-grid { gap: 5px; }
+			.skin-card { padding: 10px 4px; }
+			.skin-name { font-size: 0.58rem; }
+		}
+
+		.message h2 {
+			margin: 0 0 9px;
+			color: var(--pink);
+			font: 400 clamp(2.4rem, 11vw, 4rem)/0.95 Georgia, serif;
+		}
+
+		.message p {
+			margin: 0 0 22px;
+			color: var(--muted);
+			font-size: 0.8rem;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+		}
+
+		button {
+			border: 1px solid var(--mint);
+			border-radius: 8px;
+			color: var(--bg);
+			background: var(--mint);
+			cursor: pointer;
+			font: 700 0.72rem Arial, sans-serif;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+		}
+
+		.restart, .play { padding: 13px 25px; }
+		.play { padding: 16px 42px; font-size: 0.85rem; }
+
+		.level-up {
+			position: absolute;
+			z-index: 4;
+			top: 36%;
+			right: 0;
+			left: 0;
+			color: var(--yellow);
+			font: 700 clamp(1.7rem, 8vw, 3rem) Georgia, serif;
+			letter-spacing: 0.08em;
+			opacity: 0;
+			pointer-events: none;
+			text-align: center;
+			text-shadow: 0 0 20px rgba(255, 209, 102, 0.7);
+			text-transform: uppercase;
+		}
+
+		.level-up.show { animation: levelUp 1.25s ease-out both; }
+
+		@keyframes levelUp {
+			0% { opacity: 0; transform: scale(0.7) translateY(12px); }
+			20%, 70% { opacity: 1; transform: scale(1) translateY(0); }
+			100% { opacity: 0; transform: scale(1.08) translateY(-20px); }
+		}
+
+		.controls {
+			display: flex;
+			gap: 12px;
+			padding-top: 14px;
+		}
+
+		.audio-controls {
+			display: flex;
+			gap: 8px;
+			padding-top: 10px;
+		}
+
+		.audio-button {
+			flex: 1;
+			min-height: 38px;
+			border-color: var(--line);
+			color: var(--muted);
+			background: rgba(12, 20, 31, 0.86);
+			font-size: 0.62rem;
+		}
+
+		.audio-button.active,
+		.audio-button:hover {
+			border-color: var(--mint);
+			color: var(--mint);
+		}
+
+		.sound-button {
+			flex: 0 0 112px;
+		}
+
+		.move {
+			flex: 1;
+			min-height: 64px;
+			color: var(--mint);
+			background: rgba(17, 34, 42, 0.92);
+			font-size: 1.55rem;
+			line-height: 1;
+			-webkit-tap-highlight-color: transparent;
+		}
+
+		.move:active { background: #1c4547; transform: scale(0.98); }
+		button:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+
+		@media (min-width: 700px) {
+			.shell { padding-top: 28px; padding-bottom: 28px; }
+			.controls { padding-top: 16px; }
+			.move { min-height: 52px; }
+		}
+	</style>
+</head>
+<body>
+	<main class="shell">
+		<header class="topbar">
+			<div>
+				<h1 class="brand">Gokol</h1>
+				<p class="eyebrow">Zombie Escape</p>
+			</div>
+			<div class="stats">
+				<div class="stat score"><small>Score</small><span id="score">0</span></div>
+				<div class="stat coins"><small>Coins</small><span id="coins">0</span></div>
+				<div class="stat level"><small>Level</small><span id="level">1</span></div>
+			</div>
+		</header>
+
+		<section class="arena" id="arena" aria-label="Zombie Escape game">
+			<div id="player" class="entity" aria-label="Player"></div>
+			<div class="level-up" id="level-up">Level Up!</div>
+			<div class="message menu" id="start-menu">
+				<div>
+					<h2>GOKOL<br> ZOMBIE ESCAPE</h2>
+					<p>Move left and right. Avoid the zombies!</p>
+					<p class="best-score">BEST SCORE <span id="best-score">0</span></p>
+					<button class="play" id="play" type="button">Play</button>
+					<button class="shop-back" id="shop-open" type="button">Shop</button>
+				</div>
+			</div>
+			<div class="message menu" id="shop-screen" hidden>
+				<div class="shop-content">
+					<h2>SHOP</h2>
+					<p class="shop-balance">COINS: <span id="shop-coins">0</span></p>
+					<div class="skin-grid">
+						<article class="skin-card">
+							<div class="skin-preview"></div><p class="skin-name">NEON MINT</p><p class="skin-price">FREE</p>
+							<button class="skin-action" data-skin="mint" type="button">Unlocked</button>
+						</article>
+						<article class="skin-card">
+							<div class="skin-preview violet"></div><p class="skin-name">VIOLET</p><p class="skin-price">25 COINS</p>
+							<button class="skin-action" data-skin="violet" type="button">Buy</button>
+						</article>
+						<article class="skin-card">
+							<div class="skin-preview coral"></div><p class="skin-name">CORAL</p><p class="skin-price">60 COINS</p>
+							<button class="skin-action" data-skin="coral" type="button">Buy</button>
+						</article>
+					</div>
+					<button class="shop-back" id="shop-back" type="button">Back</button>
+				</div>
+			</div>
+			<div class="message" id="game-over" hidden>
+				<div>
+					<h2>Game Over</h2>
+					<p>Score <span id="final-score">0</span> · Coins <span id="final-coins">0</span> · Level <span id="final-level">1</span></p>
+					<p class="best-score">BEST SCORE <span id="final-best-score">0</span></p>
+					<button class="restart" id="restart" type="button">Play Again</button>
+				</div>
+			</div>
+		</section>
+
+		<nav class="controls" aria-label="Movement controls">
+			<button class="move" id="left" type="button" aria-label="Move left">&#8592;</button>
+			<button class="move" id="right" type="button" aria-label="Move right">&#8594;</button>
+		</nav>
+		<nav class="audio-controls" aria-label="Music controls">
+			<button class="audio-button" id="music-toggle" type="button">Play Music</button>
+			<button class="audio-button" id="mute-toggle" type="button">Mute</button>
+			<button class="audio-button sound-button active" id="sound-toggle" type="button">Sound On</button>
+		</nav>
+	</main>
+	<audio id="background-music" src="jumpingbunny-game-background-359782.mp3" loop preload="auto"></audio>
+
+	<script>
+		const arena = document.querySelector('#arena');
+		const playerElement = document.querySelector('#player');
+		const scoreElement = document.querySelector('#score');
+		const coinsElement = document.querySelector('#coins');
+		const levelElement = document.querySelector('#level');
+		const finalScoreElement = document.querySelector('#final-score');
+		const bestScoreElement = document.querySelector('#best-score');
+		const finalBestScoreElement = document.querySelector('#final-best-score');
+		const finalCoinsElement = document.querySelector('#final-coins');
+		const finalLevelElement = document.querySelector('#final-level');
+		const startMenuElement = document.querySelector('#start-menu');
+		const playButton = document.querySelector('#play');
+		const shopOpenButton = document.querySelector('#shop-open');
+		const shopBackButton = document.querySelector('#shop-back');
+		const shopScreenElement = document.querySelector('#shop-screen');
+		const shopCoinsElement = document.querySelector('#shop-coins');
+		const skinButtons = document.querySelectorAll('.skin-action');
+		const gameOverElement = document.querySelector('#game-over');
+		const levelUpElement = document.querySelector('#level-up');
+		const restartButton = document.querySelector('#restart');
+		const backgroundMusic = document.querySelector('#background-music');
+		const musicToggle = document.querySelector('#music-toggle');
+		const muteToggle = document.querySelector('#mute-toggle');
+		const soundToggle = document.querySelector('#sound-toggle');
+		const bestScoreKey = 'gokol-best-score';
+		const walletCoinsKey = 'gokol-wallet-coins';
+		const purchasedSkinsKey = 'gokol-purchased-skins';
+		const selectedSkinKey = 'gokol-selected-skin';
+		let bestScore = Number.parseInt(localStorage.getItem(bestScoreKey), 10) || 0;
+		let walletCoins = Number.parseInt(localStorage.getItem(walletCoinsKey), 10) || 0;
+		let purchasedSkins;
+		try {
+			purchasedSkins = JSON.parse(localStorage.getItem(purchasedSkinsKey));
+			if (!Array.isArray(purchasedSkins)) purchasedSkins = ['mint'];
+		} catch (error) {
+			purchasedSkins = ['mint'];
+		}
+		let selectedSkin = localStorage.getItem(selectedSkinKey) || 'mint';
+		const skinPrices = { mint: 0, violet: 25, coral: 60 };
+		if (!Object.prototype.hasOwnProperty.call(skinPrices, selectedSkin) || !purchasedSkins.includes(selectedSkin)) selectedSkin = 'mint';
+		const player = { x: 50, width: 42, height: 48 };
+		const keys = { left: false, right: false };
+		let zombies = [];
+		let coins = [];
+		let score = 0;
+		let coinCount = 0;
+		let level = 1;
+		let spawnTimer = 0;
+		let coinTimer = 0;
+		let lastTime = 0;
+		let gameRunning = false;
+		let soundEnabled = true;
+		let soundUnlocked = false;
+		let audioContext;
+		let animationFrame;
+
+		function updateBestScore() {
+			if (score > bestScore) {
+				bestScore = score;
+				localStorage.setItem(bestScoreKey, String(bestScore));
+			}
+			bestScoreElement.textContent = bestScore;
+			finalBestScoreElement.textContent = bestScore;
+		}
+
+		function saveShopState() {
+			localStorage.setItem(walletCoinsKey, String(walletCoins));
+			localStorage.setItem(purchasedSkinsKey, JSON.stringify(purchasedSkins));
+			localStorage.setItem(selectedSkinKey, selectedSkin);
+		}
+
+		function applySelectedSkin() {
+			playerElement.classList.remove('skin-violet', 'skin-coral');
+			if (selectedSkin !== 'mint') playerElement.classList.add(`skin-${selectedSkin}`);
+		}
+
+		function updateShop() {
+			shopCoinsElement.textContent = walletCoins;
+			skinButtons.forEach((button) => {
+				const skin = button.dataset.skin;
+				const unlocked = purchasedSkins.includes(skin);
+				button.disabled = !unlocked && walletCoins < skinPrices[skin];
+				button.textContent = unlocked ? (selectedSkin === skin ? 'Selected' : 'Select') : 'Buy';
+			});
+		}
+
+		function unlockAudio() {
+			if (!audioContext) {
+				const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+				audioContext = new AudioContextClass();
+			}
+			if (audioContext.state === 'suspended') audioContext.resume();
+		}
+
+		function playSound(name) {
+			if (!soundEnabled || !soundUnlocked) return;
+			unlockAudio();
+			const now = audioContext.currentTime;
+			const notes = {
+				coin: [[660, 0, 0.08], [990, 0.07, 0.13]],
+				levelup: [[523, 0, 0.12], [659, 0.1, 0.12], [784, 0.2, 0.18]],
+				hit: [[150, 0, 0.2]],
+				gameover: [[392, 0, 0.16], [294, 0.14, 0.2], [196, 0.32, 0.28]],
+				click: [[440, 0, 0.07]]
+			};
+			const sequence = notes[name];
+			if (!sequence) return;
+			sequence.forEach(([frequency, offset, duration]) => {
+				const oscillator = audioContext.createOscillator();
+				const gain = audioContext.createGain();
+				const start = now + offset;
+				oscillator.type = name === 'hit' ? 'sawtooth' : 'sine';
+				oscillator.frequency.setValueAtTime(frequency, start);
+				gain.gain.setValueAtTime(0.0001, start);
+				gain.gain.exponentialRampToValueAtTime(name === 'hit' ? 0.12 : 0.16, start + 0.01);
+				gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+				oscillator.connect(gain);
+				gain.connect(audioContext.destination);
+				oscillator.start(start);
+				oscillator.stop(start + duration + 0.02);
+			});
+		}
+
+		function setPlayerPosition() {
+			playerElement.style.left = `${player.x}%`;
+			playerElement.style.bottom = '22px';
+		}
+
+		function spawnZombie() {
+			const zombieElement = document.createElement('div');
+			zombieElement.className = 'entity zombie';
+			const zombie = {
+				element: zombieElement,
+				x: 8 + Math.random() * 84,
+				y: -48,
+				width: 38,
+				height: 42,
+				speed: 85 + score * 2.2 + level * 12 + Math.random() * 35
+			};
+			zombieElement.style.left = `${zombie.x}%`;
+			zombieElement.style.top = `${zombie.y}px`;
+			arena.appendChild(zombieElement);
+			zombies.push(zombie);
+			playSound('zombie');
+		}
+
+		function spawnCoin() {
+			const coinElement = document.createElement('div');
+			coinElement.className = 'entity coin';
+			const coin = {
+				element: coinElement,
+				x: 8 + Math.random() * 84,
+				y: -25,
+				width: 25,
+				height: 25,
+				speed: 65 + level * 8
+			};
+			coinElement.style.left = `${coin.x}%`;
+			coinElement.style.top = `${coin.y}px`;
+			arena.appendChild(coinElement);
+			coins.push(coin);
+		}
+
+		function overlaps(zombie) {
+			const arenaWidth = arena.clientWidth;
+			const playerLeft = (player.x / 100) * arenaWidth - player.width / 2;
+			const playerTop = arena.clientHeight - 22 - player.height;
+			const zombieLeft = (zombie.x / 100) * arenaWidth - zombie.width / 2;
+			return playerLeft < zombieLeft + zombie.width &&
+				playerLeft + player.width > zombieLeft &&
+				playerTop < zombie.y + zombie.height &&
+				playerTop + player.height > zombie.y;
+		}
+
+		function overlapsPlayer(item) {
+			const arenaWidth = arena.clientWidth;
+			const playerLeft = (player.x / 100) * arenaWidth - player.width / 2;
+			const playerTop = arena.clientHeight - 22 - player.height;
+			const itemLeft = (item.x / 100) * arenaWidth - item.width / 2;
+			return playerLeft < itemLeft + item.width &&
+				playerLeft + player.width > itemLeft &&
+				playerTop < item.y + item.height &&
+				playerTop + player.height > item.y;
+		}
+
+		function updateLevel() {
+			const nextLevel = Math.floor(score / 10) + 1;
+			if (nextLevel > level) {
+				level = nextLevel;
+				levelElement.textContent = level;
+				levelUpElement.classList.remove('show');
+				void levelUpElement.offsetWidth;
+				levelUpElement.classList.add('show');
+				playSound('levelup');
+			}
+		}
+
+		function endGame() {
+			gameRunning = false;
+			backgroundMusic.pause();
+			playSound('gameover');
+			updateBestScore();
+			finalScoreElement.textContent = score;
+			finalCoinsElement.textContent = coinCount;
+			finalLevelElement.textContent = level;
+			gameOverElement.hidden = false;
+			cancelAnimationFrame(animationFrame);
+		}
+
+		function update(time) {
+			if (!gameRunning) return;
+			const delta = Math.min((time - lastTime) / 1000, 0.05);
+			lastTime = time;
+			const movement = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+			player.x = Math.max(5, Math.min(95, player.x + movement * 42 * delta));
+			setPlayerPosition();
+			spawnTimer += delta * 1000;
+			if (spawnTimer > Math.max(360, 920 - score * 7)) {
+				spawnZombie();
+				spawnTimer = 0;
+			}
+			coinTimer += delta * 1000;
+			if (coinTimer > 1250 + Math.random() * 900) {
+				spawnCoin();
+				coinTimer = 0;
+			}
+
+			zombies = zombies.filter((zombie) => {
+				zombie.y += zombie.speed * delta;
+				zombie.element.style.top = `${zombie.y}px`;
+				if (overlaps(zombie)) {
+					playSound('hit');
+					endGame();
+					return true;
+				}
+				if (zombie.y > arena.clientHeight + zombie.height) {
+					zombie.element.remove();
+					score += 1;
+					scoreElement.textContent = score;
+					updateBestScore();
+					updateLevel();
+					return false;
+				}
+				return true;
+			});
+
+			coins = coins.filter((coin) => {
+				coin.y += coin.speed * delta;
+				coin.element.style.top = `${coin.y}px`;
+				if (overlapsPlayer(coin)) {
+					coin.element.remove();
+					coinCount += 1;
+					walletCoins += 1;
+					saveShopState();
+					coinsElement.textContent = coinCount;
+					updateShop();
+					playSound('coin');
+					return false;
+				}
+				if (coin.y > arena.clientHeight + coin.height) {
+					coin.element.remove();
+					return false;
+				}
+				return true;
+			});
+			animationFrame = requestAnimationFrame(update);
+		}
+
+		function setDirection(direction, active) {
+			keys[direction] = active;
+		}
+
+		function bindTouchButton(button, direction) {
+			button.addEventListener('pointerdown', (event) => {
+				event.preventDefault();
+				setDirection(direction, true);
+			});
+			['pointerup', 'pointercancel', 'pointerleave'].forEach((eventName) => {
+				button.addEventListener(eventName, () => setDirection(direction, false));
+			});
+		}
+
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+				event.preventDefault();
+				setDirection(event.key === 'ArrowLeft' ? 'left' : 'right', true);
+			}
+		});
+
+		document.addEventListener('keyup', (event) => {
+			if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+				setDirection(event.key === 'ArrowLeft' ? 'left' : 'right', false);
+			}
+		});
+
+		function resetGame() {
+			soundUnlocked = true;
+			unlockAudio();
+			zombies.forEach((zombie) => zombie.element.remove());
+			coins.forEach((coin) => coin.element.remove());
+			zombies = [];
+			coins = [];
+			score = 0;
+			coinCount = 0;
+			level = 1;
+			scoreElement.textContent = '0';
+			coinsElement.textContent = '0';
+			levelElement.textContent = '1';
+			spawnTimer = 0;
+			coinTimer = 0;
+			levelUpElement.classList.remove('show');
+			startMenuElement.hidden = true;
+			gameOverElement.hidden = true;
+			shopScreenElement.hidden = true;
+			gameRunning = true;
+			player.x = 50;
+			applySelectedSkin();
+			setPlayerPosition();
+			lastTime = performance.now();
+			animationFrame = requestAnimationFrame(update);
+		}
+
+		function updateMusicButton() {
+			musicToggle.textContent = backgroundMusic.paused ? 'Play Music' : 'Pause Music';
+			musicToggle.classList.toggle('active', !backgroundMusic.paused);
+			muteToggle.textContent = backgroundMusic.muted ? 'Unmute' : 'Mute';
+			muteToggle.classList.toggle('active', backgroundMusic.muted);
+		}
+
+		function updateSoundButton() {
+			soundToggle.textContent = soundEnabled ? 'Sound On' : 'Sound Off';
+			soundToggle.classList.toggle('active', soundEnabled);
+		}
+
+		function startMusic() {
+			backgroundMusic.play().then(updateMusicButton).catch(updateMusicButton);
+		}
+
+		playButton.addEventListener('click', () => {
+			resetGame();
+			playSound('click');
+			startMusic();
+		});
+		restartButton.addEventListener('click', () => {
+			resetGame();
+			playSound('click');
+			startMusic();
+		});
+		shopOpenButton.addEventListener('click', () => {
+			startMenuElement.hidden = true;
+			shopScreenElement.hidden = false;
+			updateShop();
+		});
+		shopBackButton.addEventListener('click', () => {
+			shopScreenElement.hidden = true;
+			startMenuElement.hidden = false;
+		});
+		skinButtons.forEach((button) => {
+			button.addEventListener('click', () => {
+				const skin = button.dataset.skin;
+				if (purchasedSkins.includes(skin)) {
+					selectedSkin = skin;
+				} else if (walletCoins >= skinPrices[skin]) {
+					walletCoins -= skinPrices[skin];
+					purchasedSkins.push(skin);
+					selectedSkin = skin;
+				}
+				saveShopState();
+				applySelectedSkin();
+				updateShop();
+				playSound('click');
+			});
+		});
+		musicToggle.addEventListener('click', () => {
+			if (backgroundMusic.paused) startMusic();
+			else backgroundMusic.pause();
+			updateMusicButton();
+		});
+		muteToggle.addEventListener('click', () => {
+			backgroundMusic.muted = !backgroundMusic.muted;
+			updateMusicButton();
+		});
+		soundToggle.addEventListener('click', () => {
+			soundEnabled = !soundEnabled;
+			if (soundEnabled) playSound('click');
+			updateSoundButton();
+		});
+		backgroundMusic.addEventListener('play', updateMusicButton);
+		backgroundMusic.addEventListener('pause', updateMusicButton);
+		updateMusicButton();
+		updateSoundButton();
+		updateBestScore();
+		applySelectedSkin();
+		updateShop();
+
+		bindTouchButton(document.querySelector('#left'), 'left');
+		bindTouchButton(document.querySelector('#right'), 'right');
+		setPlayerPosition();
+	</script>
+</body>
+</html>
